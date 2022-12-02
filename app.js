@@ -27,19 +27,63 @@ const initializeDbAndServer = async () => {
 
 initializeDbAndServer();
 
-const convertObj = (dbObject2) => {
+const convertObj = (dbObj) => {
   return {
-    Id: dbObject2.id,
-    todo: dbObject2.todo,
-    priority: dbObject2.priority,
-    status: dbObject2.status,
+    id: dbObj.id,
+    todo: dbObj.todo,
+    priority: dbObj.priority,
+    status: dbObj.status,
   };
 };
+
+const ifPriorityAndStatusGiven = (requestQuery) => {
+  return requestQuery.priority != undefined && requestQuery.status != undefined;
+};
+
+const ifPriorityGiven = (requestQuery) => {
+  return requestQuery.priority != undefined;
+};
+
+const ifStatusGiven = (requestQuery) => {
+  return requestQuery.status != undefined;
+};
+
 //API-1//
 app.get("/todos/", async (request, response) => {
-  const getStates = `SELECT * FROM todo;`;
-  const states = await db.all(getStates);
-  response.send(states.map((each) => convertObj(each)));
+  let data = null;
+  let getTodoQuery = "";
+  const { search_q = "", priority, status } = request.query;
+
+  switch (true) {
+    case ifPriorityAndStatusGiven(request.query):
+      getTodoQuery = `SELECT * FROM todo 
+      WHERE
+        todo LIKE '%${search_q}%'
+        AND priority = '${priority}'
+        AND status = '${status}';`;
+      break;
+    case ifPriorityGiven(request.query):
+      getTodoQuery = `
+        SELECT * FROM todo
+        WHERE
+          todo LIKE '%${search_q}%'
+          AND priority = '${priority}';`;
+      break;
+    case ifStatusGiven(request.query):
+      getTodoQuery = `
+        SELECT * FROM todo
+        WHERE 
+          todo LIKE '%${search_q}%'
+          AND status = '${status}';`;
+      break;
+    default:
+      getTodoQuery = `
+            SELECT * FROM todo
+            WHERE 
+              todo LIKE '%${search_q}%';`;
+  }
+  data = await db.all(getTodoQuery);
+  response.send(data);
 });
 //API-5//
 app.delete("/todos/:todoId/", async (request, response) => {
